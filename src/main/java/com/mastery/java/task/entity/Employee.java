@@ -17,4 +17,7 @@ public class Employee {
     private String jobTitle;
     @JsonFormat(pattern="yyyy-MM-dd")
     private LocalDate dateOfBirth;
+
+    public Employee() {
+    }
 }
