@@ -1,10 +1,7 @@
+
 ### Practical task
 
-Using the provided skeleton, implement the REST service.
-
-Useful link: https://spring.io/guides/gs/rest-service/
-
-In addition you could use Swagger to provide API documentation.
+To start the application, you need to execute sql commands from src/main/resources/database/createDB.sql
         
         
   
