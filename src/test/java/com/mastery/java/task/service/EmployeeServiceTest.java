@@ -6,30 +6,35 @@ import com.mastery.java.task.dto.EmployeeDTO;
 import com.mastery.java.task.entity.Department;
 import com.mastery.java.task.entity.Employee;
 import com.mastery.java.task.entity.enums.Gender;
-import com.mastery.java.task.exception.DepartmentNotFouondException;
-import com.mastery.java.task.exception.EmployeeNotFouondException;
+import com.mastery.java.task.exception.DepartmentNotFoundException;
 import com.mastery.java.task.facade.EmployeeFacade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.data.jdbc.DataJdbcTest;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-@DataJdbcTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@SpringBootTest
 @Import({JdbcEmployeeDao.class, JdbcDepartmentDao.class, EmployeeService.class, EmployeeFacade.class})
 public class EmployeeServiceTest {
-    @Autowired
+    @MockBean
     private JdbcEmployeeDao employeeDao;
-    @Autowired
+    @MockBean
     private JdbcDepartmentDao departmentDao;
+
     @Autowired
     private EmployeeFacade employeeFacade;
 
@@ -37,6 +42,8 @@ public class EmployeeServiceTest {
     private EmployeeService employeeService;
 
     private Employee testEmployee;
+    private Employee result;
+
 
     @BeforeEach
     void setup() {
@@ -47,36 +54,61 @@ public class EmployeeServiceTest {
         testEmployee.setGender(Gender.FEMALE);
         testEmployee.setDepartment(new Department(1L, "programmers"));
         testEmployee.setJobTitle("forTest");
+
+        result = new Employee();
+        result.setId(1L);
+        result.setFirstName("forTest");
+        result.setLastName("forTest");
+        result.setDateOfBirth(LocalDate.now());
+        result.setGender(Gender.FEMALE);
+        result.setDepartment(new Department(1L, "programmers"));
+        result.setJobTitle("forTest");
+
+        when(departmentDao.findById(1L)).thenReturn(Optional.of(new Department(1L, "programmers")));
+        when(employeeDao.save(testEmployee)).thenReturn(result);
+        when(employeeDao.findById(1L)).thenReturn(Optional.of(testEmployee));
     }
 
     @Test
     void testSave() {
-        assertTrue(employeeService.save(testEmployee) > 0);
+        assertEquals(result, employeeService.save(testEmployee));
+        verify(employeeDao).save(testEmployee);
     }
 
     @Test
     void testSaveWithWrongDepartment() {
+        when(departmentDao.findById(-1L)).thenReturn(Optional.empty());
+
         testEmployee.setDepartment(new Department(-1L, "prog"));
-        assertThrows(DepartmentNotFouondException.class, () -> {
+        assertThrows(DepartmentNotFoundException.class, () -> {
             employeeService.save(testEmployee);
         });
     }
 
     @Test
     void testUpdate() {
-        testEmployee.setId(5L);
+        when(employeeDao.update(testEmployee)).thenReturn(testEmployee);
+        when(departmentDao.findById(2L)).thenReturn(Optional.of(new Department(2L, null)));
+
+        testEmployee.setId(employeeDao.save(testEmployee).getId());
+        testEmployee.setFirstName("updTest");
+        testEmployee.setLastName("updTest");
+        testEmployee.setJobTitle("updTest");
+        testEmployee.setDepartment(new Department(2L, null));
+
         EmployeeDTO employeeDTO = employeeFacade.employeeToEmployeeDTO(testEmployee);
-        assertTrue(employeeService.update(employeeDTO) > 0);
+        Employee updatedEmployee = employeeService.update(employeeDTO);
+
+        assertEquals(testEmployee, updatedEmployee);
     }
 
     @Test
     void testDelete() {
-        assertTrue(employeeService.delete(5L) > 0);
-    }
+        doNothing().when(employeeDao).delete(1L);
 
-    @Test
-    void testDeleteWithWrongId() {
-        assertThrows(EmployeeNotFouondException.class, () -> employeeService.delete(-1L));
+        employeeService.delete(1L);
+
+        verify(employeeDao, times(1)).delete(1L);
     }
 
     @Test
@@ -87,6 +119,7 @@ public class EmployeeServiceTest {
 
     @Test
     void testFindById() {
-        assertNotNull(employeeService.getEmployeeById(5L));
+        employeeService.save(testEmployee);
+        assertNotNull(employeeService.getEmployeeById(1L));
     }
 }

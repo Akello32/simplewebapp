@@ -9,39 +9,53 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
 public class JdbcEmployeeDao implements EmployeeDao {
     private static final Logger LOG = LoggerFactory.getLogger(JdbcEmployeeDao.class);
 
+    private final JdbcTemplate jdbcTemplate;
+
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    public JdbcEmployeeDao(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
     @Override
-    public int save(Employee employee) {
+    public Employee save(Employee employee) {
         LOG.info("Saving employee...");
-        return jdbcTemplate.update("insert into employee (first_name, last_name, job_title, gender, date_of_birth, department_id) values(?, ?, ?, ?, ?, ?)",
-                employee.getFirstName(), employee.getLastName(), employee.getJobTitle(), employee.getGender().toString(), employee.getDateOfBirth(), employee.getDepartment().getId());
-    }
+        SimpleJdbcInsert create = new SimpleJdbcInsert(jdbcTemplate.getDataSource())
+                .withTableName("employee")
+                .usingGeneratedKeyColumns("employee_id");
+
+        Long id = (Long.valueOf((Integer) create.executeAndReturnKey(createParam(employee))));
+
+        return findById(id).orElse(null);
+  }
 
     @Override
-    public int update(Employee employee) {
+    public Employee update(Employee employee) {
         LOG.info("Updating employee...");
-        return jdbcTemplate.update("update employee set first_name = ?, last_name = ?," +
-                        " job_title = ?, gender = ?, date_of_birth = ?, department_id = ?",
-                employee.getFirstName(), employee.getLastName(), employee.getJobTitle(), employee.getGender().toString(), employee.getDateOfBirth(), employee.getDepartment().getId());
+        jdbcTemplate.update("update employee set first_name = ?, last_name = ?," +
+                        " job_title = ?, gender = ?, date_of_birth = ?, department_id = ? where employee_id = ?",
+                employee.getFirstName(), employee.getLastName(), employee.getJobTitle(), employee.getGender().toString(), employee.getDateOfBirth(), employee.getDepartment().getId(), employee.getId());
+
+        return findById(employee.getId()).orElse(null);
     }
 
     @Override
-    public int delete(Long employeeId) {
+    public void delete(Long employeeId) {
         LOG.info("Deleting employee...");
-        return jdbcTemplate.update("delete from employee where employee_id = ?", employeeId);
+        jdbcTemplate.update("delete from employee where employee_id = ?", employeeId);
     }
 
     @Override
@@ -67,6 +81,18 @@ public class JdbcEmployeeDao implements EmployeeDao {
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
         }
+    }
+
+    private Map<String, Object> createParam(Employee employee) {
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("first_name", employee.getFirstName());
+        parameters.put("last_name", employee.getLastName());
+        parameters.put("job_title", employee.getJobTitle());
+        parameters.put("gender", employee.getGender().toString());
+        parameters.put("date_of_birth", employee.getDateOfBirth());
+        parameters.put("department_id", employee.getDepartment().getId());
+
+        return parameters;
     }
 
     private Employee buildEmployee(ResultSet rs) throws SQLException {

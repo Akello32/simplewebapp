@@ -1,5 +1,6 @@
 package com.mastery.java.task.rest;
 
+import com.google.common.base.Preconditions;
 import com.mastery.java.task.dto.EmployeeDTO;
 import com.mastery.java.task.entity.Employee;
 import com.mastery.java.task.facade.EmployeeFacade;
@@ -7,7 +8,6 @@ import com.mastery.java.task.service.EmployeeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,34 +25,24 @@ import java.util.stream.Collectors;
 @RequestMapping("employee")
 @CrossOrigin
 public class EmployeeController {
+    private final EmployeeService employeeService;
+    private final EmployeeFacade employeeFacade;
+
     @Autowired
-    private EmployeeService employeeService;
-    @Autowired
-    private EmployeeFacade employeeFacade;
-
-    @PostMapping("/create")
-    public ResponseEntity<Object> createEmployee(@Valid @RequestBody Employee employee, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            return new ResponseEntity<>(bindingResult.getModel(), HttpStatus.BAD_REQUEST);
-        }
-
-        return new ResponseEntity<>(employeeService.save(employee), HttpStatus.OK);
+    public EmployeeController(EmployeeService employeeService, EmployeeFacade employeeFacade) {
+        this.employeeService = employeeService;
+        this.employeeFacade = employeeFacade;
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<Object> updateEmployee(@Valid @RequestBody EmployeeDTO employeeDTO, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            return new ResponseEntity<>(bindingResult.getModel(), HttpStatus.BAD_REQUEST);
-        }
-
-        return new ResponseEntity<>(employeeService.update(employeeDTO), HttpStatus.OK);
+    @GetMapping
+    public ResponseEntity<List<EmployeeDTO>> getALlEmployees() {
+        List<EmployeeDTO> employeeDTOList = employeeService.getAllEmployees()
+                .stream()
+                .map(employeeFacade::employeeToEmployeeDTO)
+                .collect(Collectors.toList());
+        return new ResponseEntity<>(employeeDTOList, HttpStatus.OK);
     }
 
-    @DeleteMapping("/{employeeId}/delete")
-    public ResponseEntity<String> deleteEmployee(@PathVariable String employeeId) {
-        employeeService.delete(Long.parseLong(employeeId));
-        return new ResponseEntity<>("Employee was deleted", HttpStatus.OK);
-    }
 
     @GetMapping("/{employeeId}")
     public ResponseEntity<EmployeeDTO> getEmployeeProfile(@PathVariable String employeeId) {
@@ -63,12 +52,22 @@ public class EmployeeController {
         return new ResponseEntity<>(employeeDTO, HttpStatus.OK);
     }
 
-    @GetMapping("/all")
-    public ResponseEntity<List<EmployeeDTO>> getALlEmployees() {
-        List<EmployeeDTO> employeeDTOList = employeeService.getAllEmployees()
-                .stream()
-                .map(employeeFacade::employeeToEmployeeDTO)
-                .collect(Collectors.toList());
-        return new ResponseEntity<>(employeeDTOList, HttpStatus.OK);
+    @PostMapping("/create")
+    public ResponseEntity<Object> createEmployee(@RequestBody Employee employee) {
+        Preconditions.checkNotNull(employee);
+        Preconditions.checkArgument(employee.getDepartment() != null);
+        return new ResponseEntity<>(employeeService.save(employee), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/update")
+    public ResponseEntity<Object> updateEmployee(@RequestBody EmployeeDTO employeeDTO) {
+        Preconditions.checkNotNull(employeeDTO);
+        return new ResponseEntity<>(employeeService.update(employeeDTO), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{employeeId}/delete")
+    public ResponseEntity<Object> deleteEmployee(@PathVariable String employeeId) {
+        employeeService.delete(Long.parseLong(employeeId));
+        return new ResponseEntity<>("Employee was deleted", HttpStatus.OK);
     }
 }

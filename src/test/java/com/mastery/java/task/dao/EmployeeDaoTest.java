@@ -15,8 +15,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import javax.sql.DataSource;
 import java.time.LocalDate;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -46,18 +47,26 @@ class EmployeeDaoTest {
 
     @Test
     void testSave() {
-        assertTrue(employeeDao.save(testEmployee) > 0);
+        assertNotNull(employeeDao.save(testEmployee).getId());
     }
 
     @Test
     void testUpdate() {
-        testEmployee.setId(3L);
-        assertTrue(employeeDao.update(testEmployee) > 0);
+        testEmployee.setId(employeeDao.save(testEmployee).getId());
+        testEmployee.setFirstName("updTest");
+        testEmployee.setLastName("updTest");
+        testEmployee.setJobTitle("updTest");
+        testEmployee.setDepartment(new Department(2L, null));
+        Employee updatedEmployee = employeeDao.update(testEmployee);
+
+        assertEquals(testEmployee, updatedEmployee);
     }
 
     @Test
     void testDelete() {
-        assertTrue(employeeDao.delete(5L) > 0);
+        Employee employeeForDelete = employeeDao.save(testEmployee);
+        employeeDao.delete(employeeForDelete.getId());
+        assertFalse(employeeDao.findById(employeeForDelete.getId()).isPresent());
     }
 
     @Test

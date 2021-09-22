@@ -1,6 +1,5 @@
 package com.mastery.java.task.rest;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mastery.java.task.dto.EmployeeDTO;
 import com.mastery.java.task.entity.Department;
@@ -17,23 +16,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.validation.BeanPropertyBindingResult;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(EmployeeController.class)
@@ -66,29 +59,35 @@ public class EmployeeControllerTest {
 
     @Test
     void testCreate() throws Exception {
+        when(employeeController.createEmployee(testEmployee)).thenReturn(new ResponseEntity<>(testEmployee, HttpStatus.CREATED));
+        testEmployee.setId(1L);
         this.mockMvc.perform(post("/employee/create")
                 .content(objectMapper.writeValueAsBytes(testEmployee))
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().json("1"));
+                .andExpect(status().isCreated())
+                .andExpect(content().json(objectMapper.writeValueAsString(testEmployee)));
     }
 
     @Test
     void testUpdate() throws Exception {
-        testEmployee.setId(5L);
+        testEmployee.setId(1L);
+        EmployeeDTO employeeDTO = employeeFacade.employeeToEmployeeDTO(testEmployee);
+
+        when(employeeController.updateEmployee(employeeDTO)).thenReturn(new ResponseEntity<>(testEmployee, HttpStatus.OK));
+
         this.mockMvc.perform(put("/employee/update")
-                .content(objectMapper.writeValueAsBytes(employeeFacade.employeeToEmployeeDTO(testEmployee)))
+                .content(objectMapper.writeValueAsBytes(employeeDTO))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(mvcResult -> Pattern.matches("\\d", mvcResult.getResponse().getContentAsString()));
+                .andExpect(content().json(objectMapper.writeValueAsString(testEmployee)));
     }
 
     @Test
     void testDelete() throws Exception {
+        when(employeeController.deleteEmployee("1")).thenReturn(new ResponseEntity<>("Employee was deleted", HttpStatus.OK));
         this.mockMvc.perform(delete("/employee/{employeeId}/delete", "1"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/json;charset=UTF-8"))
-                .andExpect(content().json("Employee was deleted"));
+                .andExpect(content().string("Employee was deleted"));
     }
 
     @Test
@@ -109,7 +108,7 @@ public class EmployeeControllerTest {
                 new ResponseEntity<>(new ArrayList<>(List.of(employeeDTO)), HttpStatus.OK)
         );
 
-        this.mockMvc.perform(get("/employee/all"))
+        this.mockMvc.perform(get("/employee"))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(new ArrayList<>(List.of(employeeDTO)))));
 
