@@ -7,7 +7,7 @@ import com.mastery.java.task.entity.Department;
 import com.mastery.java.task.entity.Employee;
 import com.mastery.java.task.entity.enums.Gender;
 import com.mastery.java.task.exception.DepartmentNotFoundException;
-import com.mastery.java.task.facade.EmployeeFacade;
+import com.mastery.java.task.converter.EmployeeConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,14 +21,13 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
-@Import({JdbcEmployeeDao.class, JdbcDepartmentDao.class, EmployeeService.class, EmployeeFacade.class})
+@Import({JdbcEmployeeDao.class, JdbcDepartmentDao.class, EmployeeService.class, EmployeeConverter.class})
 public class EmployeeServiceTest {
     @MockBean
     private JdbcEmployeeDao employeeDao;
@@ -36,7 +35,7 @@ public class EmployeeServiceTest {
     private JdbcDepartmentDao departmentDao;
 
     @Autowired
-    private EmployeeFacade employeeFacade;
+    private EmployeeConverter employeeConverter;
 
     @Autowired
     private EmployeeService employeeService;
@@ -96,10 +95,10 @@ public class EmployeeServiceTest {
         testEmployee.setJobTitle("updTest");
         testEmployee.setDepartment(new Department(2L, null));
 
-        EmployeeDTO employeeDTO = employeeFacade.employeeToEmployeeDTO(testEmployee);
-        Employee updatedEmployee = employeeService.update(employeeDTO);
+        EmployeeDTO employeeDTO = employeeConverter.employeeToEmployeeDTO(testEmployee);
+        EmployeeDTO updatedEmployee = employeeService.update(employeeDTO);
 
-        assertEquals(testEmployee, updatedEmployee);
+        assertEquals(employeeDTO, updatedEmployee);
     }
 
     @Test

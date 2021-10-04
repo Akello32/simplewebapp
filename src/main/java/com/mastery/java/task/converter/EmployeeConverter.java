@@ -1,11 +1,11 @@
-package com.mastery.java.task.facade;
+package com.mastery.java.task.converter;
 
 import com.mastery.java.task.dto.EmployeeDTO;
 import com.mastery.java.task.entity.Employee;
 import org.springframework.stereotype.Component;
 
 @Component
-public class EmployeeFacade {
+public class EmployeeConverter {
     public EmployeeDTO employeeToEmployeeDTO(Employee employee) {
         EmployeeDTO employeeDTO = new EmployeeDTO();
 

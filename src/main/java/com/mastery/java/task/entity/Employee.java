@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.mastery.java.task.entity.enums.Gender;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class Employee {
     private Long id;
     private String firstName;
@@ -18,6 +20,4 @@ public class Employee {
     private String jobTitle;
     @JsonFormat(pattern="yyyy-MM-dd")
     private LocalDate dateOfBirth;
-
-    public Employee() {}
 }

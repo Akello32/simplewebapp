@@ -7,45 +7,48 @@ import com.mastery.java.task.entity.Department;
 import com.mastery.java.task.entity.Employee;
 import com.mastery.java.task.exception.DepartmentNotFoundException;
 import com.mastery.java.task.exception.EmployeeNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mastery.java.task.converter.EmployeeConverter;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class EmployeeService {
     private final JdbcEmployeeDao jdbcEmployeeDao;
     private final JdbcDepartmentDao jdbcDepartmentDao;
+    private final EmployeeConverter employeeConverter;
 
-    @Autowired
-    public EmployeeService(JdbcEmployeeDao jdbcEmployeeDao, JdbcDepartmentDao jdbcDepartmentDao) {
+
+    public EmployeeService(JdbcEmployeeDao jdbcEmployeeDao, JdbcDepartmentDao jdbcDepartmentDao, EmployeeConverter employeeConverter) {
         this.jdbcEmployeeDao = jdbcEmployeeDao;
         this.jdbcDepartmentDao = jdbcDepartmentDao;
+        this.employeeConverter = employeeConverter;
     }
 
     public Employee save(Employee employee) {
         jdbcDepartmentDao.findById(employee.getDepartment().getId())
-                .orElseThrow(() -> new DepartmentNotFoundException("Department not found"));
+                .orElseThrow(DepartmentNotFoundException::new);
         return jdbcEmployeeDao.save(employee);
     }
 
-    public Employee update(EmployeeDTO employeeDTO) {
+    public EmployeeDTO update(EmployeeDTO employeeDTO) {
         Employee employee = jdbcEmployeeDao.findById(employeeDTO.getId())
-                .orElseThrow(() -> new EmployeeNotFoundException("Employee not found"));
+                .orElseThrow(EmployeeNotFoundException::new);
 
         if (employeeDTO.getFirstName() != null) employee.setFirstName(employeeDTO.getFirstName());
         if (employeeDTO.getLastName() != null) employee.setLastName(employeeDTO.getLastName());
         if (employeeDTO.getJobTitle() != null) employee.setJobTitle(employeeDTO.getJobTitle());
 
         if (employeeDTO.getDepartmentId() == null) {
-            return jdbcEmployeeDao.update(employee);
+            return employeeConverter.employeeToEmployeeDTO(jdbcEmployeeDao.update(employee));
         } else {
             Department department = jdbcDepartmentDao.findById(employeeDTO.getDepartmentId())
-                    .orElseThrow(() -> new DepartmentNotFoundException("Department not found"));
+                    .orElseThrow(DepartmentNotFoundException::new);
             employee.setDepartment(department);
         }
 
-        return jdbcEmployeeDao.update(employee);
+        return employeeConverter.employeeToEmployeeDTO(jdbcEmployeeDao.update(employee));
     }
 
     public void delete(Long id) {
@@ -53,12 +56,15 @@ public class EmployeeService {
         jdbcEmployeeDao.delete(id);
     }
 
-    public List<Employee> getAllEmployees() {
-        return jdbcEmployeeDao.findAll();
+    public List<EmployeeDTO> getAllEmployees() {
+        return jdbcEmployeeDao.findAll()
+                .stream()
+                .map(employeeConverter::employeeToEmployeeDTO)
+                .collect(Collectors.toList());
     }
 
-    public Employee getEmployeeById(Long id) {
-        return jdbcEmployeeDao.findById(id)
-                .orElseThrow(() -> new EmployeeNotFoundException("Employee not found"));
+    public EmployeeDTO getEmployeeById(Long id) {
+        return employeeConverter.employeeToEmployeeDTO(jdbcEmployeeDao.findById(id)
+                .orElseThrow(EmployeeNotFoundException::new));
     }
 }
