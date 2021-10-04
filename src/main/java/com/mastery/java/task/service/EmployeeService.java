@@ -36,14 +36,14 @@ public class EmployeeService {
         Employee employee = jdbcEmployeeDao.findById(employeeDTO.getId())
                 .orElseThrow(EmployeeNotFoundException::new);
 
-        if (employeeDTO.getFirstName() != null) employee.setFirstName(employeeDTO.getFirstName());
-        if (employeeDTO.getLastName() != null) employee.setLastName(employeeDTO.getLastName());
-        if (employeeDTO.getJobTitle() != null) employee.setJobTitle(employeeDTO.getJobTitle());
+        employeeDTO.getFirstName().ifPresent(employee::setFirstName);
+        employeeDTO.getLastName().ifPresent(employee::setLastName);
+        employeeDTO.getJobTitle().ifPresent(employee::setJobTitle);
 
-        if (employeeDTO.getDepartmentId() == null) {
+        if (!employeeDTO.getDepartmentId().isPresent()) {
             return employeeConverter.employeeToEmployeeDTO(jdbcEmployeeDao.update(employee));
         } else {
-            Department department = jdbcDepartmentDao.findById(employeeDTO.getDepartmentId())
+            Department department = jdbcDepartmentDao.findById(employeeDTO.getDepartmentId().get())
                     .orElseThrow(DepartmentNotFoundException::new);
             employee.setDepartment(department);
         }
